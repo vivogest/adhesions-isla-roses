@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registre de Adhesions - Illa de Roses</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .hidden { display: none !important; }
+        .login-box { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .card { background: white; border: 0.5px solid #ddd; border-radius: 8px; padding: 2rem; width: 100%; max-width: 320px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        input, select { font-family: inherit; font-size: 14px; border: 0.5px solid #ddd; padding: 10px 12px; border-radius: 6px; background: white; width: 100%; margin-bottom: 0.5rem; }
+        input:focus, select:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1); }
+        input:disabled, select:disabled { background: #f5f5f5; cursor: not-allowed; color: #999; }
+        button { font-family: inherit; font-size: 14px; border: 0.5px solid #0066cc; padding: 10px 12px; border-radius: 6px; background: white; color: #0066cc; cursor: pointer; font-weight: 500; width: 100%; transition: all 0.2s; margin-bottom: 0.5rem; }
+        button:hover { background: #f0f8ff; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        label { display: block; margin-bottom: 6px; font-size: 13px; color: #666; font-weight: 500; }
+        .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+        .metric-card { background: white; padding: 1rem; border-radius: 6px; border: 0.5px solid #ddd; }
+        .metric-label { font-size: 13px; color: #666; margin-bottom: 4px; }
+        .metric-value { font-size: 22px; font-weight: 500; }
+        .progress-section { background: white; border: 0.5px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+        .progress-bar { width: 100%; height: 24px; background: #f0f0f0; border-radius: 12px; overflow: hidden; margin: 0.5rem 0; }
+        .progress-fill { height: 100%; background: #0066cc; transition: width 0.3s ease; }
+        .progress-fill.success { background: #059669; }
+        .progress-text { font-size: 12px; color: #059669; margin-top: 8px; font-weight: 500; }
+        .form-section { background: white; border: 0.5px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+        .form-grid { display: grid; gap: 12px; margin-bottom: 1rem; }
+        .form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .selection-box { background: #f9fafb; padding: 1.5rem; border-radius: 6px; margin-bottom: 1.5rem; border: 0.5px solid #ddd; }
+        .property-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border-radius: 4px; margin-bottom: 6px; border: 0.5px solid #ddd; font-size: 13px; }
+        .property-item button { width: auto; border: none; color: #dc2626; background: transparent; padding: 4px 8px; font-size: 16px; cursor: pointer; margin: 0; }
+        .property-total { padding: 8px; background: #e6f1fb; border-radius: 4px; font-size: 13px; font-weight: 500; color: #0066cc; border: 0.5px solid #bdd4f4; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border-bottom: 0.5px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f9fafb; font-weight: 500; }
+        .error { color: #dc2626; margin-bottom: 12px; display: none; }
+        h2 { font-size: 16px; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div id="loginSection" class="login-box">
+        <div class="card">
+            <h1 style="text-align: center; margin-bottom: 1.5rem; font-size: 24px;">Registre Adhesions</h1>
+            <label>Contrasenya</label>
+            <input type="password" id="passwordInput" placeholder="Entra contrasenya" autofocus onkeypress="if(event.key==='Enter') loginClick();">
+            <div id="passwordError" class="error">Contrasenya incorrecta</div>
+            <button type="button" onclick="loginClick()">Accedir</button>
+        </div>
+    </div>
+
+    <div id="mainSection" class="hidden container">
+        <h1 style="margin-bottom: 1.5rem;">Registre de Adhesions - Illa de Roses</h1>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-label">Propietaris</div>
+                <div class="metric-value" id="countPropietarios">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Coef Acumulat</div>
+                <div class="metric-value" id="countCoef">0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Percentatge</div>
+                <div class="metric-value" id="countPercentatge">0.0%</div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <label>Progres cap al 25%</label>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+            </div>
+            <div class="progress-text hidden" id="successMessage">✓ Llindar del 25% assolit!</div>
+        </div>
+
+        <div class="form-section">
+            <h2>Registrar Nova Adhesió</h2>
+            <div class="form-grid">
+                <div>
+                    <label>Nom i Cognoms</label>
+                    <input type="text" id="nombreInput" placeholder="Nom complet">
+                </div>
+            </div>
+            <div class="form-grid">
+                <div><label>Telèfon</label><input type="tel" id="telefonoInput" placeholder="666 123 456"></div>
+                <div><label>Email</label><input type="email" id="emailInput" placeholder="nom@email.com"></div>
+            </div>
+
+            <div class="selection-box">
+                <h3 style="margin-bottom: 1rem;">Selecciona Propietat</h3>
+                <div class="form-grid-3">
+                    <div>
+                        <label>Zona</label>
+                        <select id="zonaSelect" onchange="updatePlantas()">
+                            <option value="">Zona</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Planta</label>
+                        <select id="plantaSelect" onchange="updatePisos()" disabled>
+                            <option value="">Planta</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Piso</label>
+                        <select id="pisoSelect" disabled>
+                            <option value="">Piso</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" onclick="addProperty()" style="margin-top: 1rem;">+ Afegir Propietat</button>
+            </div>
+
+            <div id="propertiesSection" class="hidden">
+                <h3>Propietats Vinculades</h3>
+                <div id="propertiesList"></div>
+                <div class="property-total" id="propertyTotal">Coef Total: 0.00</div>
+            </div>
+
+            <button type="button" onclick="registerPropietario()">Registrar Adhesió</button>
+        </div>
+
+        <div id="resultsSection" class="form-section hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px;">
+                <h2 style="margin: 0;">Registrats (<span id="countRegistered">0</span>)</h2>
+                <button type="button" onclick="downloadExcel()" style="width: auto;">📥 Excel</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Telèfon</th>
+                            <th>Email</th>
+                            <th style="text-align: right;">Coef</th>
+                            <th style="text-align: center; width: 50px;">✕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+const CADASTRE_BY_ZONE = {"Llevant": {"0": [{"pt": "01", "c": 0.15}, {"pt": "02", "c": 0.25}, {"pt": "03", "c": 0.08}, {"pt": "03", "c": 0.25}, {"pt": "04", "c": 0.25}, {"pt": "05", "c": 0.25}, {"pt": "06", "c": 0.25}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.22}, {"pt": "09", "c": 0.22}, {"pt": "10", "c": 0.13}, {"pt": "11", "c": 0.26}, {"pt": "12", "c": 0.13}, {"pt": "14", "c": 0.22}, {"pt": "4A", "c": 0.06}, {"pt": "4B", "c": 0.06}, {"pt": "4C", "c": 0.07}, {"pt": "5A", "c": 0.07}, {"pt": "5B", "c": 0.07}, {"pt": "5C", "c": 0.06}], "1": [{"pt": "01", "c": 0.25}, {"pt": "02", "c": 0.25}, {"pt": "03", "c": 0.25}, {"pt": "04", "c": 0.25}, {"pt": "05", "c": 0.25}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.22}, {"pt": "09", "c": 0.22}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.25}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.22}], "2": [{"pt": "01", "c": 0.25}, {"pt": "02", "c": 0.25}, {"pt": "03", "c": 0.25}, {"pt": "04", "c": 0.25}, {"pt": "05", "c": 0.25}, {"pt": "06", "c": 0.25}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.22}, {"pt": "09", "c": 0.22}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.25}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.22}], "3": [{"pt": "01", "c": 0.25}, {"pt": "06", "c": 0.25}, {"pt": "07", "c": 0.25}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.22}, {"pt": "10", "c": 0.22}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.25}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.22}], "4": [{"pt": "01", "c": 0.25}, {"pt": "02", "c": 0.25}, {"pt": "03", "c": 0.25}, {"pt": "04", "c": 0.25}, {"pt": "05", "c": 0.25}, {"pt": "06", "c": 0.25}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.22}, {"pt": "09", "c": 0.22}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.22}], "5": [{"pt": "01", "c": 0.35}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.12}, {"pt": "04", "c": 0.12}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.12}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.22}, {"pt": "12", "c": 0.22}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.12}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.22}], "6": [{"pt": "01", "c": 0.26}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.12}, {"pt": "04", "c": 0.12}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.12}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.22}, {"pt": "12", "c": 0.22}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.12}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.22}], "7": [{"pt": "01", "c": 0.34}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.12}, {"pt": "04", "c": 0.12}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.22}, {"pt": "10", "c": 0.22}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.12}, {"pt": "16", "c": 0.22}], "8": [{"pt": "01", "c": 0.35}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.12}, {"pt": "04", "c": 0.12}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.22}, {"pt": "08", "c": 0.22}, {"pt": "09", "c": 0.12}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.22}], "9": [{"pt": "01", "c": 0.29}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.12}, {"pt": "04", "c": 0.12}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.22}, {"pt": "08", "c": 0.22}, {"pt": "09", "c": 0.12}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.22}], "10": [{"pt": "01", "c": 0.32}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.12}, {"pt": "04", "c": 0.12}, {"pt": "05", "c": 0.22}, {"pt": "06", "c": 0.22}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.12}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.22}], "11": [{"pt": "01", "c": 0.34}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.22}, {"pt": "04", "c": 0.22}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.22}], "12": [{"pt": "01", "c": 0.31}, {"pt": "02", "c": 0.12}, {"pt": "03", "c": 0.22}]}, "Tramuntana": {"0": [{"pt": "15", "c": 0.22}, {"pt": "16", "c": 0.13}, {"pt": "17", "c": 0.26}, {"pt": "18", "c": 0.26}, {"pt": "19", "c": 0.26}, {"pt": "20", "c": 0.26}, {"pt": "21", "c": 0.26}, {"pt": "22", "c": 0.26}, {"pt": "23", "c": 0.26}, {"pt": "6A", "c": 0.1}], "1": [{"pt": "15", "c": 0.22}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.25}, {"pt": "18", "c": 0.25}, {"pt": "19", "c": 0.25}, {"pt": "20", "c": 0.25}, {"pt": "21", "c": 0.25}, {"pt": "22", "c": 0.25}, {"pt": "23", "c": 0.25}], "2": [{"pt": "15", "c": 0.22}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.25}, {"pt": "18", "c": 0.25}, {"pt": "19", "c": 0.25}, {"pt": "20", "c": 0.25}, {"pt": "21", "c": 0.25}, {"pt": "22", "c": 0.25}, {"pt": "23", "c": 0.25}], "3": [{"pt": "16", "c": 0.22}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}, {"pt": "30", "c": 0.25}], "4": [{"pt": "16", "c": 0.22}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.25}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.25}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}], "5": [{"pt": "19", "c": 0.22}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}, {"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}], "6": [{"pt": "19", "c": 0.22}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}, {"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}], "7": [{"pt": "17", "c": 0.22}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}, {"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.12}], "8": [{"pt": "15", "c": 0.22}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}], "9": [{"pt": "15", "c": 0.22}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}], "10": [{"pt": "12", "c": 0.22}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.12}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.12}, {"pt": "28", "c": 0.12}, {"pt": "29", "c": 0.12}, {"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.39}], "11": [{"pt": "10", "c": 0.22}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.12}, {"pt": "16", "c": 0.12}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.12}, {"pt": "20", "c": 0.12}, {"pt": "21", "c": 0.12}, {"pt": "22", "c": 0.12}, {"pt": "23", "c": 0.12}, {"pt": "24", "c": 0.12}, {"pt": "25", "c": 0.12}, {"pt": "26", "c": 0.12}, {"pt": "27", "c": 0.4}], "12": [{"pt": "04", "c": 0.22}, {"pt": "05", "c": 0.12}, {"pt": "06", "c": 0.12}, {"pt": "07", "c": 0.12}, {"pt": "08", "c": 0.12}, {"pt": "09", "c": 0.12}, {"pt": "10", "c": 0.12}, {"pt": "11", "c": 0.12}, {"pt": "12", "c": 0.12}, {"pt": "14", "c": 0.12}, {"pt": "15", "c": 0.12}, {"pt": "16", "c": 0.43}, {"pt": "17", "c": 0.12}, {"pt": "18", "c": 0.12}, {"pt": "19", "c": 0.4}]}, "Xaloc": {"0": [{"pt": "0B", "c": 0.07}, {"pt": "0C", "c": 0.07}, {"pt": "18", "c": 0.08}, {"pt": "24", "c": 0.26}, {"pt": "25", "c": 0.26}, {"pt": "26", "c": 0.26}, {"pt": "27", "c": 0.26}, {"pt": "28", "c": 0.26}, {"pt": "29", "c": 0.26}, {"pt": "30", "c": 0.26}], "1": [{"pt": "24", "c": 0.25}, {"pt": "25", "c": 0.25}, {"pt": "26", "c": 0.25}, {"pt": "27", "c": 0.25}, {"pt": "28", "c": 0.25}, {"pt": "29", "c": 0.25}, {"pt": "30", "c": 0.25}], "2": [{"pt": "24", "c": 0.25}, {"pt": "25", "c": 0.25}, {"pt": "26", "c": 0.25}, {"pt": "27", "c": 0.25}, {"pt": "28", "c": 0.25}, {"pt": "29", "c": 0.25}, {"pt": "30", "c": 0.25}], "3": [{"pt": "31", "c": 0.25}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.25}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.25}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.25}], "4": [{"pt": "29", "c": 0.12}, {"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.25}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.25}, {"pt": "38", "c": 0.25}, {"pt": "39", "c": 0.25}], "5": [{"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.12}, {"pt": "41", "c": 0.12}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}, {"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.12}], "6": [{"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.12}, {"pt": "41", "c": 0.12}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}, {"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.12}], "7": [{"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.12}, {"pt": "41", "c": 0.12}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}], "8": [{"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.12}, {"pt": "41", "c": 0.39}], "9": [{"pt": "30", "c": 0.12}, {"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.4}]}, "Garb\u00ed": {"0": [{"pt": "19A", "c": 0.11}, {"pt": "22", "c": 0.07}, {"pt": "222", "c": 0.06}, {"pt": "223", "c": 0.08}, {"pt": "224", "c": 0.08}, {"pt": "225", "c": 0.08}, {"pt": "226", "c": 0.08}, {"pt": "31", "c": 0.26}, {"pt": "32", "c": 0.26}, {"pt": "33", "c": 0.26}, {"pt": "34", "c": 0.26}, {"pt": "35", "c": 0.28}, {"pt": "36", "c": 0.29}, {"pt": "37", "c": 0.25}, {"pt": "38", "c": 0.25}, {"pt": "39", "c": 0.25}, {"pt": "401", "c": 0.12}, {"pt": "402", "c": 0.12}, {"pt": "41", "c": 0.33}], "1": [{"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.16}, {"pt": "41", "c": 0.16}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}, {"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.12}, {"pt": "49", "c": 0.12}, {"pt": "50", "c": 0.12}, {"pt": "51", "c": 0.33}], "2": [{"pt": "31", "c": 0.12}, {"pt": "32", "c": 0.12}, {"pt": "33", "c": 0.12}, {"pt": "34", "c": 0.12}, {"pt": "35", "c": 0.12}, {"pt": "36", "c": 0.12}, {"pt": "37", "c": 0.12}, {"pt": "38", "c": 0.12}, {"pt": "39", "c": 0.12}, {"pt": "40", "c": 0.16}, {"pt": "41", "c": 0.16}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}, {"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.12}, {"pt": "49", "c": 0.12}, {"pt": "50", "c": 0.12}, {"pt": "51", "c": 0.33}], "3": [{"pt": "41", "c": 0.12}, {"pt": "41", "c": 0.12}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}, {"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.12}, {"pt": "49", "c": 0.12}, {"pt": "50", "c": 0.16}, {"pt": "51", "c": 0.16}, {"pt": "52", "c": 0.12}, {"pt": "53", "c": 0.12}, {"pt": "54", "c": 0.12}, {"pt": "55", "c": 0.12}, {"pt": "56", "c": 0.12}, {"pt": "57", "c": 0.12}, {"pt": "58", "c": 0.12}, {"pt": "59", "c": 0.39}], "4": [{"pt": "40", "c": 0.12}, {"pt": "41", "c": 0.12}, {"pt": "42", "c": 0.12}, {"pt": "43", "c": 0.12}, {"pt": "44", "c": 0.12}, {"pt": "45", "c": 0.12}, {"pt": "46", "c": 0.12}, {"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.32}, {"pt": "49", "c": 0.16}, {"pt": "50", "c": 0.12}, {"pt": "51", "c": 0.12}, {"pt": "52", "c": 0.12}, {"pt": "53", "c": 0.12}, {"pt": "54", "c": 0.12}, {"pt": "55", "c": 0.12}, {"pt": "56", "c": 0.23}], "5": [{"pt": "49", "c": 0.12}, {"pt": "50", "c": 0.12}, {"pt": "51", "c": 0.12}, {"pt": "52", "c": 0.12}, {"pt": "53", "c": 0.12}, {"pt": "54", "c": 0.12}, {"pt": "55", "c": 0.12}, {"pt": "56", "c": 0.12}, {"pt": "57", "c": 0.33}], "6": [{"pt": "49", "c": 0.12}, {"pt": "50", "c": 0.12}, {"pt": "51", "c": 0.12}, {"pt": "52", "c": 0.12}, {"pt": "53", "c": 0.12}, {"pt": "54", "c": 0.12}, {"pt": "55", "c": 0.4}], "7": [{"pt": "47", "c": 0.12}, {"pt": "48", "c": 0.12}, {"pt": "49", "c": 0.12}, {"pt": "50", "c": 0.12}, {"pt": "51", "c": 0.4}]}, "Zona Comercial": {"0": [{"pt": "07", "c": 0.11}, {"pt": "08", "c": 0.11}, {"pt": "09", "c": 0.11}, {"pt": "10", "c": 0.11}, {"pt": "11", "c": 0.11}, {"pt": "12", "c": 0.11}, {"pt": "13", "c": 0.11}, {"pt": "14", "c": 0.11}, {"pt": "15", "c": 0.11}, {"pt": "16", "c": 0.11}, {"pt": "17", "c": 0.21}, {"pt": "20", "c": 0.29}, {"pt": "21", "c": 0.25}, {"pt": "24", "c": 0.66}, {"pt": "25", "c": 0.1}, {"pt": "26", "c": 0.04}, {"pt": "27", "c": 0.04}, {"pt": "28", "c": 0.04}, {"pt": "29", "c": 0.04}, {"pt": "30", "c": 0.04}, {"pt": "31", "c": 0.04}, {"pt": "32", "c": 0.04}, {"pt": "33", "c": 0.04}, {"pt": "34", "c": 0.04}, {"pt": "35", "c": 0.08}, {"pt": "36", "c": 0.06}, {"pt": "37", "c": 0.11}, {"pt": "38", "c": 0.06}, {"pt": "39", "c": 0.06}, {"pt": "40", "c": 0.05}, {"pt": "41", "c": 0.04}, {"pt": "42", "c": 0.04}, {"pt": "43", "c": 0.04}, {"pt": "44", "c": 0.07}, {"pt": "45", "c": 0.04}, {"pt": "46", "c": 0.03}, {"pt": "47", "c": 0.07}, {"pt": "48", "c": 0.21}, {"pt": "49", "c": 0.03}, {"pt": "50", "c": 0.03}, {"pt": "51", "c": 0.03}, {"pt": "52", "c": 0.01}, {"pt": "53", "c": 0.01}, {"pt": "54", "c": 0.01}, {"pt": "55", "c": 0.01}, {"pt": "56", "c": 0.11}, {"pt": "57", "c": 0.43}]}};
+        const CONTRASENA = 'adhesions2026';
+        const TOTAL_CADASTRAL = 96.09;
+        const LLINDAR_25 = 24.0225;
+
+        let propietarios = [];
+        let selectedProperties = [];
+
+        function loginClick() {
+            if (document.getElementById('passwordInput').value === CONTRASENA) {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('mainSection').classList.remove('hidden');
+                initializeForm();
+            } else {
+                document.getElementById('passwordError').style.display = 'block';
+                document.getElementById('passwordInput').value = '';
+            }
+        }
+
+        function initializeForm() {
+            const zonas = Object.keys(CADASTRE_BY_ZONE).sort();
+            const zonaSelect = document.getElementById('zonaSelect');
+            zonas.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z;
+                opt.textContent = z;
+                zonaSelect.appendChild(opt);
+            });
+        }
+
+        function updatePlantas() {
+            const zona = document.getElementById('zonaSelect').value;
+            const plantas = zona ? Object.keys(CADASTRE_BY_ZONE[zona]).map(p => parseInt(p)).sort((a,b) => a-b) : [];
+            const sel = document.getElementById('plantaSelect');
+            sel.innerHTML = '<option value="">Planta</option>';
+            plantas.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = String(p).padStart(2,'0');
+                sel.appendChild(opt);
+            });
+            sel.disabled = !zona;
+            document.getElementById('pisoSelect').disabled = true;
+            document.getElementById('pisoSelect').innerHTML = '<option value="">Piso</option>';
+        }
+
+        function updatePisos() {
+            const zona = document.getElementById('zonaSelect').value;
+            const planta = document.getElementById('plantaSelect').value;
+            const pisos = (zona && planta) ? CADASTRE_BY_ZONE[zona][planta].map(p => ({ pt: p.pt, c: p.c })).sort((a,b) => {
+                const aNum = parseInt(a.pt) || 999;
+                const bNum = parseInt(b.pt) || 999;
+                return aNum - bNum;
+            }) : [];
+            const sel = document.getElementById('pisoSelect');
+            sel.innerHTML = '<option value="">Piso</option>';
+            pisos.forEach((p, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = 'Pt ' + p.pt + ' (' + p.c.toFixed(2) + ')';
+                sel.appendChild(opt);
+            });
+            sel.disabled = pisos.length === 0;
+        }
+
+        function addProperty() {
+            const zona = document.getElementById('zonaSelect').value;
+            const planta = document.getElementById('plantaSelect').value;
+            const pisoIdx = document.getElementById('pisoSelect').value;
+            
+            if (zona && planta && pisoIdx !== '') {
+                const pisos = CADASTRE_BY_ZONE[zona][planta];
+                const piso = pisos[parseInt(pisoIdx)];
+                if (piso) {
+                    selectedProperties.push({
+                        id: Date.now(),
+                        zona: zona,
+                        planta: parseInt(planta),
+                        porta: piso.pt,
+                        coef: piso.c
+                    });
+                    document.getElementById('zonaSelect').value = '';
+                    updatePlantas();
+                    renderProperties();
+                }
+            }
+        }
+
+        function renderProperties() {
+            const sec = document.getElementById('propertiesSection');
+            const list = document.getElementById('propertiesList');
+            if (selectedProperties.length === 0) {
+                sec.classList.add('hidden');
+                return;
+            }
+            sec.classList.remove('hidden');
+            list.innerHTML = selectedProperties.map(p => 
+                `<div class="property-item">${p.zona} | Pl ${String(p.planta).padStart(2,'0')} | Pt ${p.porta} <span style="font-weight:500">(${p.coef.toFixed(2)})</span><button type="button" onclick="removeProperty(${p.id})">✕</button></div>`
+            ).join('');
+            const total = selectedProperties.reduce((s, p) => s + p.coef, 0);
+            document.getElementById('propertyTotal').textContent = 'Coef Total: ' + total.toFixed(2);
+        }
+
+        function removeProperty(id) {
+            selectedProperties = selectedProperties.filter(p => p.id !== id);
+            renderProperties();
+        }
+
+        function registerPropietario() {
+            const nombre = document.getElementById('nombreInput').value;
+            if (nombre && selectedProperties.length > 0) {
+                const coefTotal = selectedProperties.reduce((s, p) => s + p.coef, 0);
+                propietarios.push({
+                    id: Date.now(),
+                    nombre: nombre,
+                    telefono: document.getElementById('telefonoInput').value,
+                    email: document.getElementById('emailInput').value,
+                    propiedades: [...selectedProperties],
+                    coefTotal: coefTotal
+                });
+                document.getElementById('nombreInput').value = '';
+                document.getElementById('telefonoInput').value = '';
+                document.getElementById('emailInput').value = '';
+                selectedProperties = [];
+                renderProperties();
+                updateMetrics();
+                renderResults();
+            }
+        }
+
+        function updateMetrics() {
+            const total = propietarios.reduce((s, p) => s + p.coefTotal, 0);
+            const porcentaje = (total / TOTAL_CADASTRAL) * 100;
+            const progressPct = Math.min(100, (total / LLINDAR_25) * 100);
+            
+            document.getElementById('countPropietarios').textContent = propietarios.length;
+            document.getElementById('countCoef').textContent = total.toFixed(2);
+            document.getElementById('countPercentatge').textContent = porcentaje.toFixed(1) + '%';
+            document.getElementById('progressFill').style.width = progressPct + '%';
+            
+            if (total >= LLINDAR_25) {
+                document.getElementById('progressFill').classList.add('success');
+                document.getElementById('successMessage').classList.remove('hidden');
+            } else {
+                document.getElementById('progressFill').classList.remove('success');
+                document.getElementById('successMessage').classList.add('hidden');
+            }
+        }
+
+        function renderResults() {
+            if (propietarios.length === 0) {
+                document.getElementById('resultsSection').classList.add('hidden');
+                return;
+            }
+            document.getElementById('resultsSection').classList.remove('hidden');
+            document.getElementById('countRegistered').textContent = propietarios.length;
+            const tbody = document.getElementById('resultsTable');
+            tbody.innerHTML = propietarios.map(p => `
+                <tr>
+                    <td>${p.nombre}</td>
+                    <td>${p.telefono || '-'}</td>
+                    <td>${p.email || '-'}</td>
+                    <td style="text-align:right;font-weight:500">${p.coefTotal.toFixed(2)}</td>
+                    <td style="text-align:center"><button type="button" onclick="deletePropietario(${p.id})" style="width:auto;border:none;color:#dc2626;background:transparent;padding:4px 8px;margin:0;">✕</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function deletePropietario(id) {
+            propietarios = propietarios.filter(p => p.id !== id);
+            updateMetrics();
+            renderResults();
+        }
+
+        function downloadExcel() {
+            const data = propietarios.map(p => ({
+                'Nombre': p.nombre,
+                'Teléfono': p.telefono,
+                'Email': p.email,
+                'Coef Total': p.coefTotal.toFixed(2)
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Adhesiones');
+            XLSX.writeFile(wb, 'adhesiones_illa_roses.xlsx');
+        }
+    </script>
+</body>
+</html>
